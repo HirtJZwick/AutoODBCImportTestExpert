@@ -1,0 +1,34 @@
+# --- Secrets ---
+.env
+api_key.txt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# --- Virtual environments ---
+zwick_venv_py313_32/
+venv/
+.venv/
+env/
+
+# --- Pytest / coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Distribution / build ---
+dist/
+build/
+*.egg-info/
+
+# --- IDE ---
+.vscode/settings.json
+.idea/
+
+# --- OS ---
+Thumbs.db
+.DS_Store

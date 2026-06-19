@@ -187,4 +187,4 @@ that file as more built-in testXpert parameters become available.
 
 ## Author
 
-Johannes Hirt — Intern Service, ZwickRoell
+Johannes Hirt — Intern Service, ZwickRoell North America

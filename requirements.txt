@@ -1,0 +1,4 @@
+pyodbc
+openai
+pytest
+watchdog

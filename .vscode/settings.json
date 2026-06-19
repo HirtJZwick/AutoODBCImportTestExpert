@@ -1,0 +1,5 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python.defaultInterpreterPath": "${workspaceFolder}\\zwick_venv_py313_32\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": true
+}

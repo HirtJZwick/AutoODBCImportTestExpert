@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1065,
+    "name": "Customer name",
+    "mapping_section": "SeriesMapping",
+    "description": "Name of the customer, client, company, or organization"
+  },
+  {
+    "id": 1701,
+    "name": "Sample ID",
+    "mapping_section": "SpecimenMapping",
+    "description": "Unique sample, specimen, or test piece identifier"
+  },
+  {
+    "id": 1703,
+    "name": "Part number",
+    "mapping_section": "SpecimenMapping",
+    "description": "Customer part number, article number, component number, or Teilnummer"
+  },
+  {
+    "id": 1031,
+    "name": "Specimen thickness",
+    "mapping_section": "NumericMapping",
+    "description": "Thickness of the specimen, often named thickness, Dicke, thickness_mm, or t"
+  },
+  {
+    "id": 1032,
+    "name": "Specimen width",
+    "mapping_section": "NumericMapping",
+    "description": "Width of the specimen, often named width, Breite, width_mm, or b"
+  }
+]

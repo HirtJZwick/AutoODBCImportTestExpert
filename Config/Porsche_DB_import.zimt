@@ -1,0 +1,57 @@
+; ============================================
+; Generic Database Import Script (Specimen-ID lookup)
+; Reads the mapping from the customer INI config file and imports
+; the single database row whose key column matches the Specimen ID
+; entered by the operator in testXpert (T[1701]).
+; ============================================
+
+; --- Load connection settings ---
+Var sConfigFile String = "C:\Users\Hirtj\AutoODBCImportProject\Config\Porsche_DB_config.ini"
+Var sODBC String = GetIniString(sConfigFile, "Connection", "ODBC")
+Var sTable String = GetIniString(sConfigFile, "Connection", "Table")
+Var sKey String = GetIniString(sConfigFile, "Connection", "KeyColumn")
+Var sKeyCol String = GetIniString(sConfigFile, "Connection", "KeyColumnName")
+
+DataBase sODBC, sTable, sKey
+
+; --- Specimen ID typed into testXpert ---
+Var sSpecimenID String = T[1701]
+; Match the database key column against the entered Specimen ID
+Var sCondition String = sKeyCol + "='" + sSpecimenID + "'"
+
+; --- Import Specimen-level text parameters ---
+Var nSpecCount Num = GetIniNum(sConfigFile, "SpecimenMapping", "Count")
+Var i Num = 1
+While i <= nSpecCount
+    Var sCol String = GetIniString(sConfigFile, "SpecimenMapping", "Col" + NumToStr(i))
+    Var nParam Num = GetIniNum(sConfigFile, "SpecimenMapping", "Param" + NumToStr(i))
+    Var sVal String = ReadDataBaseString(sCol, sCondition, 1)
+    CheckDataBase
+    T[nParam] = sVal
+    i = i + 1
+EndWhile
+
+; --- Import Numeric specimen-level parameters ---
+Var nNumCount Num = GetIniNum(sConfigFile, "NumericMapping", "Count")
+i = 1
+While i <= nNumCount
+    Var sCol2 String = GetIniString(sConfigFile, "NumericMapping", "Col" + NumToStr(i))
+    Var nParam2 Num = GetIniNum(sConfigFile, "NumericMapping", "Param" + NumToStr(i))
+    Var nVal Num = ReadDataBaseNum(sCol2, sCondition, 1)
+    CheckDataBase
+    P[nParam2] = nVal
+    i = i + 1
+EndWhile
+
+; --- Import Series-level text parameters ---
+Var nSerCount Num = GetIniNum(sConfigFile, "SeriesMapping", "Count")
+i = 1
+While i <= nSerCount
+    Var sCol3 String = GetIniString(sConfigFile, "SeriesMapping", "Col" + NumToStr(i))
+    Var nParam3 Num = GetIniNum(sConfigFile, "SeriesMapping", "Param" + NumToStr(i))
+    Var sVal3 String = ReadDataBaseString(sCol3, sCondition, 1)
+    CheckDataBase
+    T[nParam3] = sVal3
+    i = i + 1
+EndWhile
+

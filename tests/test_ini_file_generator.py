@@ -72,6 +72,17 @@ class TestConnectionSection:
         cfg = _parse(gen.generate("Porsche_DB", "TestData", FULL_SUGGESTIONS, key_column="MyKey"))
         assert cfg.get("Connection", "KeyColumn") == "S:MyKey"
 
+    def test_key_column_name_is_bare_column(self):
+        """KeyColumnName must hold the SQL column name without the S: prefix."""
+        gen = IniFileGenerator()
+        cfg = _parse(gen.generate("Porsche_DB", "TestData", FULL_SUGGESTIONS))
+        assert cfg.get("Connection", "KeyColumnName") == "SampleID"
+
+    def test_key_column_name_follows_override(self):
+        gen = IniFileGenerator()
+        cfg = _parse(gen.generate("Porsche_DB", "TestData", FULL_SUGGESTIONS, key_column="MyKey"))
+        assert cfg.get("Connection", "KeyColumnName") == "MyKey"
+
     def test_row_num_column_default(self):
         gen = IniFileGenerator()
         cfg = _parse(gen.generate("Porsche_DB", "TestData", FULL_SUGGESTIONS))

@@ -29,7 +29,10 @@ The workflow is:
 2. A Python tool analyzes the database schema and suggests how each column
    should map to a built-in testXpert parameter
 3. The tool generates an INI config file describing the mapping
-4. A single generic ZIMT script reads the INI and imports the data before each test
+4. The tool generates a ZIMT import script
+5. At test time the operator types a **Specimen ID** into testXpert. The ZIMT
+   script reads the INI, looks up the database row whose key column matches that
+   Specimen ID, and writes the values into the built-in parameters.
 
 The ZIMT script is the same for every customer — only the INI file changes.
 
@@ -37,9 +40,17 @@ The ZIMT script is the same for every customer — only the INI file changes.
 
 ## How the ZIMT Script looks like
 
+The operator types a **Specimen ID** (e.g. `P-003`) into the testXpert
+"Specimen ID" field — parameter `T[1701]`. When the script runs it imports the
+single database row whose key column equals that Specimen ID.
+
+```
+
 ; ============================================
-; Generic Database Import Script
-; Reads mapping from customer INI config file
+; Generic Database Import Script (Specimen-ID lookup)
+; Reads the mapping from the customer INI config file and imports
+; the single database row whose key column matches the Specimen ID
+; entered by the operator in testXpert (T[1701]).
 ; ============================================
 
 ; --- Load connection settings ---
@@ -47,12 +58,14 @@ Var sConfigFile String = "C:\ProgramData\zwick\configs\generated_ini_file.ini"
 Var sODBC String = GetIniString(sConfigFile, "Connection", "ODBC")
 Var sTable String = GetIniString(sConfigFile, "Connection", "Table")
 Var sKey String = GetIniString(sConfigFile, "Connection", "KeyColumn")
-Var sRowCol String = GetIniString(sConfigFile, "Connection", "RowNumColumn")
+Var sKeyCol String = GetIniString(sConfigFile, "Connection", "KeyColumnName")
 
 DataBase sODBC, sTable, sKey
 
-Var nRow Num = P[48144]
-Var sCondition String = sRowCol + "=" + NumToStr(nRow)
+; --- Specimen ID typed into testXpert ---
+Var sSpecimenID String = T[1701]
+; Match the database key column against the entered Specimen ID
+Var sCondition String = sKeyCol + "='" + sSpecimenID + "'"
 
 ; --- Import Specimen-level text parameters ---
 Var nSpecCount Num = GetIniNum(sConfigFile, "SpecimenMapping", "Count")
@@ -78,20 +91,18 @@ While i <= nNumCount
     i = i + 1
 EndWhile
 
-; --- Import Series-level parameters (only on first specimen) ---
-If P[48144] = 1
-    Var nSerCount Num = GetIniNum(sConfigFile, "SeriesMapping", "Count")
-    i = 1
-    While i <= nSerCount
-        Var sCol3 String = GetIniString(sConfigFile, "SeriesMapping", "Col" + NumToStr(i))
-        Var nParam3 Num = GetIniNum(sConfigFile, "SeriesMapping", "Param" + NumToStr(i))
-        Var sVal3 String = ReadDataBaseString(sCol3, sCondition, 1)
-        CheckDataBase
-        T[nParam3] = sVal3
-        i = i + 1
-    EndWhile
-EndIf
-
+; --- Import Series-level text parameters ---
+Var nSerCount Num = GetIniNum(sConfigFile, "SeriesMapping", "Count")
+i = 1
+While i <= nSerCount
+    Var sCol3 String = GetIniString(sConfigFile, "SeriesMapping", "Col" + NumToStr(i))
+    Var nParam3 Num = GetIniNum(sConfigFile, "SeriesMapping", "Param" + NumToStr(i))
+    Var sVal3 String = ReadDataBaseString(sCol3, sCondition, 1)
+    CheckDataBase
+    T[nParam3] = sVal3
+    i = i + 1
+EndWhile
+```
 
 
 ## How the INI File Works
@@ -106,6 +117,7 @@ Example for a Porsche database:
 ODBC=Porsche_DB
 Table=TestData
 KeyColumn=S:SampleID
+KeyColumnName=SampleID
 RowNumColumn=RowNum
 
 [SeriesMapping]
@@ -135,14 +147,54 @@ only the INI file is updated — the ZIMT script stays the same.
 
 ## Usage
 
+### Starting the application
+
 ```bash
-python main.py
+python src/main.py
 ```
 
-The tool will ask for the ODBC DSN, let you pick a table, and walk you through
-generating the INI file.
+This opens the graphical interface.
 
-The generated INI is then referenced by the generic ZIMT script in testXpert.
+### Workflow
+
+The GUI walks you through six steps, each unlocking automatically after the previous one succeeds.
+
+**Step 1 — Connect to Database**
+- Enter the ODBC Data Source Name (DSN) configured in the Windows ODBC Data Source Administrator.
+- Click **Connect**. The status indicator turns green when the connection is established.
+
+**Step 2 — Select Table**
+- All tables found in the database are listed.
+- Click the table you want to map and then click **Load Table →**.
+
+**Step 3 — Columns & Sample Data**
+- The tool displays the column names, types, and the first three rows of data so you can verify the correct table was selected.
+
+**Step 4 — Parameter Mappings**
+- Click **✦ Suggest Mappings (AI)**.
+- The tool sends the column schema and sample values to GitHub Models, which returns a suggested mapping for each column to a built-in testXpert III parameter.
+- Results appear in a table showing: DB column, matched parameter, mapping section, and confidence score.
+
+**Step 5 — Generate INI File**
+- The output path is pre-filled as `Config/<DSN>_config.ini`. Change it or click **Browse…** to pick a location.
+- Click **Generate INI** to save the file.
+- A confirmation dialog confirms the save location.
+
+**Step 6 — Generate ZIMT Import Script**
+- The output path is pre-filled as `Config/<DSN>_import.zimt`. Change it or click **Browse…** to pick a location.
+- Click **Generate ZIMT** to save the script. It is wired to the INI generated in Step 5.
+- At test time the operator types a **Specimen ID** into testXpert; running this script imports the matching database row into the built-in parameters.
+
+### API key setup
+
+The AI mapping step requires a GitHub Models token stored in `api_key.txt` in the project root:
+
+```
+AutoODBCImportProject/
+└── api_key.txt   ← paste your token here (one line, no quotes)
+```
+
+This file is excluded from version control via `.gitignore`.
 
 ---
 

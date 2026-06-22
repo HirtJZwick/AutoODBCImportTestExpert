@@ -24,10 +24,12 @@ SRC_DIR      = PROJECT_ROOT / "src"
 TESTS_DIR    = PROJECT_ROOT / "tests"
 TEST_MD      = PROJECT_ROOT / "Test.md"
 
+# Explicit venv Python — guarantees pytest and all packages are available
+VENV_PYTHON  = PROJECT_ROOT / "zwick_venv_py313_32" / "Scripts" / "python.exe"
+PYTHON       = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
+
 # Seconds to wait after the first change before running tests (debounce)
 DEBOUNCE_SECONDS = 2.0
-
-LOG_SECTION_HEADER = "## Log of the tests conducted"
 
 
 # ---------------------------------------------------------------------------
@@ -41,15 +43,19 @@ class SourceChangeHandler(FileSystemEventHandler):
         self._last_run: float = 0.0
 
     def on_modified(self, event):
-        self._maybe_run(event)
+        self._maybe_run(event.src_path, event.is_directory)
 
     def on_created(self, event):
-        self._maybe_run(event)
+        self._maybe_run(event.src_path, event.is_directory)
 
-    def _maybe_run(self, event):
-        if event.is_directory:
+    def on_moved(self, event):
+        # VS Code on Windows saves via rename (temp → final), firing on_moved
+        self._maybe_run(event.dest_path, event.is_directory)
+
+    def _maybe_run(self, path: str, is_dir: bool):
+        if is_dir:
             return
-        if not str(event.src_path).endswith(".py"):
+        if not str(path).endswith(".py"):
             return
 
         now = time.time()
@@ -57,7 +63,7 @@ class SourceChangeHandler(FileSystemEventHandler):
             return  # Skip rapid-fire saves
         self._last_run = now
 
-        rel = Path(event.src_path).relative_to(PROJECT_ROOT)
+        rel = Path(path).relative_to(PROJECT_ROOT)
         print(f"\n[Watcher] Change detected: {rel}")
         print("[Watcher] Running tests …\n")
         _run_and_log()
@@ -72,7 +78,7 @@ def _run_and_log():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", str(TESTS_DIR), "-v", "--tb=short"],
+        [PYTHON, "-m", "pytest", str(TESTS_DIR), "-v", "--tb=short"],
         capture_output=True,
         text=True,
         cwd=str(PROJECT_ROOT),
@@ -130,7 +136,8 @@ def _append_to_test_md(entry: str):
 # ---------------------------------------------------------------------------
 
 def main():
-    print(f"[Watcher] Monitoring {SRC_DIR.relative_to(PROJECT_ROOT)} for changes …")
+    print(f"[Watcher] Using Python: {PYTHON}")
+    print(f"[Watcher] Monitoring:   {SRC_DIR.relative_to(PROJECT_ROOT)}")
     print("[Watcher] Running initial test pass …\n")
 
     # Run once immediately on startup

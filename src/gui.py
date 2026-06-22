@@ -9,8 +9,10 @@ Wraps the full workflow in a single window:
   Step 3 — View columns and sample data
   Step 4 — Suggest testXpert III parameter mappings (AI)
   Step 5 — Generate and save the INI configuration file
+  Step 6 — Save the static ZIMT import script to disk
 """
 
+import shutil
 import threading
 import tkinter as tk
 from pathlib import Path
@@ -26,6 +28,7 @@ from parameter_mapper import (
 )
 
 PROJECT_ROOT           = Path(__file__).resolve().parents[1]
+STATIC_ZIMT_SCRIPT     = PROJECT_ROOT / "Config" / "generic_import.zimt"
 PARAMETER_CATALOG_PATH = PROJECT_ROOT / "Config" / "testxpert_parameters.json"
 API_KEY_FILE           = PROJECT_ROOT / "api_key.txt"
 
@@ -43,8 +46,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("testXpert III — Database Mapping Tool")
-        self.geometry("960x800")
-        self.minsize(820, 700)
+        self.geometry("960x880")
+        self.minsize(820, 780)
 
         self._db               = DatabaseConnector()
         self._columns: list[dict]              = []
@@ -168,13 +171,38 @@ class App(tk.Tk):
         self._lbl_ini_status = tk.Label(self._f5, text="", font=_FONT_NORMAL)
         self._lbl_ini_status.grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 0))
 
+        # ── Step 6: Save ZIMT import script ─────────────────────────
+        self._f6 = ttk.LabelFrame(
+            self, text=" Step 6 — Save ZIMT Import Script ", padding=8
+        )
+        self._f6.pack(fill="x", padx=12, pady=(4, 12))
+
+        tk.Label(self._f6, text="Output path:", font=_FONT_NORMAL).grid(
+            row=0, column=0, sticky="w"
+        )
+        self._zimt_path_var = tk.StringVar()
+        ttk.Entry(self._f6, textvariable=self._zimt_path_var, width=52, font=_FONT_MONO).grid(
+            row=0, column=1, padx=(6, 4), sticky="ew"
+        )
+        ttk.Button(self._f6, text="Browse…", command=self._on_browse_zimt).grid(
+            row=0, column=2, padx=4
+        )
+        self._btn_gen_zimt = ttk.Button(
+            self._f6, text="Save ZIMT", command=self._on_generate_zimt
+        )
+        self._btn_gen_zimt.grid(row=0, column=3, padx=(4, 0))
+        self._f6.columnconfigure(1, weight=1)
+
+        self._lbl_zimt_status = tk.Label(self._f6, text="", font=_FONT_NORMAL)
+        self._lbl_zimt_status.grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 0))
+
     # ------------------------------------------------------------------
     # Progressive unlock
     # ------------------------------------------------------------------
 
     def _unlock(self, step: int):
         """Enable widgets in steps 1..N and disable the rest."""
-        for n, frame in enumerate([self._f1, self._f2, self._f3, self._f4, self._f5], 1):
+        for n, frame in enumerate([self._f1, self._f2, self._f3, self._f4, self._f5, self._f6], 1):
             self._set_frame_state(frame, enabled=(n <= step))
 
     def _set_frame_state(self, frame: tk.Widget, enabled: bool):
@@ -239,6 +267,9 @@ class App(tk.Tk):
             self._ini_path_var.set(
                 str(PROJECT_ROOT / "Config" / f"{self._dsn_var.get().strip()}_config.ini")
             )
+            self._zimt_path_var.set(
+                str(PROJECT_ROOT / "Config" / f"{self._dsn_var.get().strip()}_import.zimt")
+            )
             self._unlock(step=4)
 
         self._thread(task, done)
@@ -297,9 +328,34 @@ class App(tk.Tk):
             )
             saved = gen.save(content, out_path)
             self._lbl_ini_status.configure(text=f"✓ Saved: {saved}", fg=_COLOR_OK)
+            self._unlock(step=6)
             messagebox.showinfo("Done", f"INI file saved to:\n{saved}")
         except Exception as exc:
             self._lbl_ini_status.configure(text=f"✗ {exc}", fg=_COLOR_ERR)
+
+    def _on_browse_zimt(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".zimt",
+            filetypes=[("ZIMT scripts", "*.zimt"), ("All files", "*.*")],
+            initialdir=str(PROJECT_ROOT / "Config"),
+            title="Save ZIMT script as…",
+        )
+        if path:
+            self._zimt_path_var.set(path)
+
+    def _on_generate_zimt(self):
+        out_path = self._zimt_path_var.get().strip()
+        if not out_path:
+            messagebox.showwarning("No path", "Please specify an output path.")
+            return
+        try:
+            dest = Path(out_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(STATIC_ZIMT_SCRIPT, dest)
+            self._lbl_zimt_status.configure(text=f"✓ Saved: {dest.resolve()}", fg=_COLOR_OK)
+            messagebox.showinfo("Done", f"ZIMT script saved to:\n{dest.resolve()}")
+        except Exception as exc:
+            self._lbl_zimt_status.configure(text=f"✗ {exc}", fg=_COLOR_ERR)
 
     # ------------------------------------------------------------------
     # Helpers

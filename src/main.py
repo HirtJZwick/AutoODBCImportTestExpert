@@ -13,6 +13,6 @@ from gui import App
 def main():
     App().mainloop()
 
-
+#Start the application
 if __name__ == "__main__":
     main()

@@ -10,6 +10,7 @@ Output format matches Porsche_config.ini:
     ODBC=<dsn>
     Table=<table>
     KeyColumn=S:<specimen_id_column>
+    KeyColumnName=<specimen_id_column>
     RowNumColumn=<row_num_col>
 
     [SeriesMapping]
@@ -131,6 +132,7 @@ class IniFileGenerator:
             f"ODBC={dsn}",
             f"Table={table}",
             f"KeyColumn={key_value}",
+            f"KeyColumnName={key_column}",
             f"RowNumColumn={row_num_column}",
             "",
         ]

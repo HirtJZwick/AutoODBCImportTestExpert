@@ -9,3 +9,5 @@
 ## Log of the tests conducted (Format: Description of the Test, Date, Passed or Failed, if failed add here the cause of the fail)
 | Automated pytest run | 2026-06-19 10:00 | Passed | ============================= 29 passed in 0.84s ============================== |
 | Added ini_file_generator.py + main.py INI generation step | 2026-06-19 11:05 | Passed | 49 passed in 1.08s |
+| Added zimt_script_generator.py (Specimen-ID lookup) + GUI Step 6 + INI KeyColumnName | 2026-06-22 12:45 | Passed | 68 passed in 2.14s |
+| Removed ZimtScriptGenerator — replaced with static Config/generic_import.zimt | 2026-06-22 13:18 | Passed | 51 passed in 1.67s |

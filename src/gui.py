@@ -54,6 +54,7 @@ class App(tk.Tk):
         self._rows:    list[list]              = []
         self._suggestions: list[MappingSuggestion] = []
         self._selected_table   = ""
+        self._catalog: list[dict] = load_parameter_catalog(str(PARAMETER_CATALOG_PATH))
 
         self._build_ui()
         self._unlock(step=1)
@@ -136,17 +137,26 @@ class App(tk.Tk):
         )
         for cid, hdr, w in [
             ("column",     "DB Column",            150),
-            ("parameter",  "testXpert Parameter",  250),
+            ("parameter",  "testXpert Parameter ✎", 260),
             ("section",    "Mapping Section",       150),
             ("confidence", "Confidence",             90),
         ]:
             self._map_tree.heading(cid, text=hdr)
             self._map_tree.column(cid, width=w, anchor="w")
 
+        self._map_tree.bind("<Double-1>", self._on_map_tree_click)
+
         sb_map = ttk.Scrollbar(self._f4, command=self._map_tree.yview)
         self._map_tree.configure(yscrollcommand=sb_map.set)
         self._map_tree.pack(side="left", fill="both", expand=True)
         sb_map.pack(side="left", fill="y")
+
+        tk.Label(
+            self._f4,
+            text="💡 Click a row in the 'testXpert Parameter' column to change the mapping.",
+            font=("Segoe UI", 8),
+            fg="#555555",
+        ).pack(anchor="w", pady=(4, 0))
 
         # ── Step 5: Generate INI ─────────────────────────────────────
         self._f5 = ttk.LabelFrame(self, text=" Step 5 — Generate INI File ", padding=8)
@@ -357,9 +367,48 @@ class App(tk.Tk):
         except Exception as exc:
             self._lbl_zimt_status.configure(text=f"✗ {exc}", fg=_COLOR_ERR)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+    def _on_map_tree_click(self, event: tk.Event):
+        """Open the parameter picker when the user clicks the 'parameter' column."""
+        region = self._map_tree.identify_region(event.x, event.y)
+        if region != "cell":
+            return
+        col = self._map_tree.identify_column(event.x)
+        if col != "#2":  # second column = "parameter"
+            return
+        item = self._map_tree.identify_row(event.y)
+        if not item:
+            return
+
+        all_items = self._map_tree.get_children()
+        row_index = list(all_items).index(item)
+
+        picker = _ParameterPickerDialog(self, self._catalog)
+        self.wait_window(picker)
+
+        if picker.result is None:
+            return  # cancelled
+
+        suggestion = self._suggestions[row_index]
+        if picker.result == "unmapped":
+            suggestion.parameter_id   = None
+            suggestion.parameter_name = None
+            suggestion.mapping_section = None
+            suggestion.confidence      = 0.0
+            param_label = "(unmapped)"
+            section_label = "—"
+        else:
+            entry = picker.result
+            suggestion.parameter_id    = int(entry["id"])
+            suggestion.parameter_name  = entry["name"]
+            suggestion.mapping_section = entry["mapping_section"]
+            suggestion.confidence      = 1.0
+            param_label   = f"{entry['id']} — {entry['name']}"
+            section_label = entry["mapping_section"]
+
+        self._map_tree.item(
+            item,
+            values=(suggestion.column, param_label, section_label, f"{suggestion.confidence:.0%}"),
+        )
 
     def _populate_data_tree(self):
         tree = self._data_tree
@@ -381,3 +430,89 @@ class App(tk.Tk):
             except Exception as exc:
                 self.after(0, lambda e=exc: done_fn(None, e))
         threading.Thread(target=worker, daemon=True).start()
+
+
+class _ParameterPickerDialog(tk.Toplevel):
+    """
+    Modal dialog for selecting a testXpert parameter from the catalog.
+
+    After the window closes:
+        - self.result is None          → user cancelled
+        - self.result == "unmapped"    → user chose to clear the mapping
+        - self.result is a dict        → catalog entry the user selected
+    """
+
+    def __init__(self, parent: tk.Tk, catalog: list[dict]):
+        super().__init__(parent)
+        self.title("Select testXpert Parameter")
+        self.resizable(True, True)
+        self.geometry("520x420")
+        self.minsize(400, 300)
+        self.grab_set()
+        self.transient(parent)
+
+        self.result = None
+        self._catalog = catalog
+        self._filtered: list[dict | str] = []  # "unmapped" sentinel or dict
+
+        self._build_ui()
+        self._refresh_list("")
+        self.bind("<Return>", lambda _: self._on_ok())
+        self.bind("<Escape>", lambda _: self._on_cancel())
+
+    def _build_ui(self):
+        tk.Label(self, text="Search:", font=_FONT_NORMAL).pack(anchor="w", padx=8, pady=(8, 2))
+
+        self._search_var = tk.StringVar()
+        self._search_var.trace_add("write", lambda *_: self._refresh_list(self._search_var.get()))
+        ttk.Entry(self, textvariable=self._search_var, font=_FONT_NORMAL).pack(
+            fill="x", padx=8, pady=(0, 6)
+        )
+
+        frame = tk.Frame(self)
+        frame.pack(fill="both", expand=True, padx=8)
+
+        self._listbox = tk.Listbox(frame, font=_FONT_MONO, activestyle="dotbox", selectmode="single")
+        sb = ttk.Scrollbar(frame, command=self._listbox.yview)
+        self._listbox.configure(yscrollcommand=sb.set)
+        self._listbox.pack(side="left", fill="both", expand=True)
+        sb.pack(side="left", fill="y")
+        self._listbox.bind("<Double-1>", lambda _: self._on_ok())
+
+        btn_row = tk.Frame(self)
+        btn_row.pack(fill="x", padx=8, pady=8)
+        ttk.Button(btn_row, text="OK", command=self._on_ok).pack(side="right", padx=(4, 0))
+        ttk.Button(btn_row, text="Cancel", command=self._on_cancel).pack(side="right")
+        ttk.Button(btn_row, text="Clear mapping", command=self._on_clear).pack(side="left")
+
+    def _refresh_list(self, query: str):
+        q = query.strip().lower()
+        self._filtered = []
+        for entry in self._catalog:
+            label = f"{entry['id']} — {entry['name']}  [{entry['mapping_section']}]"
+            if not q or q in label.lower() or q in entry.get("description", "").lower():
+                self._filtered.append(entry)
+
+        self._listbox.delete(0, "end")
+        for entry in self._filtered:
+            self._listbox.insert(
+                "end",
+                f"{entry['id']} — {entry['name']}  [{entry['mapping_section']}]",
+            )
+        if self._filtered:
+            self._listbox.selection_set(0)
+
+    def _on_ok(self):
+        sel = self._listbox.curselection()
+        if not sel:
+            return
+        self.result = self._filtered[sel[0]]
+        self.destroy()
+
+    def _on_clear(self):
+        self.result = "unmapped"
+        self.destroy()
+
+    def _on_cancel(self):
+        self.result = None
+        self.destroy()

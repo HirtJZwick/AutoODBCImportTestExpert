@@ -28,5 +28,72 @@
     "name": "Specimen width",
     "mapping_section": "NumericMapping",
     "description": "Width of the specimen, often named width, Breite, width_mm, or b"
+  },
+  {
+    "id": 1618,
+    "name": "Heading",
+    "mapping_section": "SeriesMapping",
+    "description": "Headline for the test report"
+  },
+  {
+    "id": 1604,
+    "name": "Job no.",
+    "mapping_section": "SeriesMapping",
+    "description": "Job number for documentation in the report"
+  },
+  {
+    "id": 1110,
+    "name": "Test standard",
+    "mapping_section": "SeriesMapping",
+    "description": "Basic test standard or norm applied to the test"
+  },
+  {
+    "id": 1605,
+    "name": "Type and designation",
+    "mapping_section": "SeriesMapping",
+    "description": "Type and designation of the tested products or material"
+  },
+  {
+    "id": 1619,
+    "name": "Material",
+    "mapping_section": "SeriesMapping",
+    "description": "Details about the tested material"
+  },
+  {
+    "id": 1620,
+    "name": "Specimen removal",
+    "mapping_section": "SeriesMapping",
+    "description": "Specimen removal location or extraction details"
+  },
+  {
+    "id": 1621,
+    "name": "Specimen type",
+    "mapping_section": "SeriesMapping",
+    "description": "Specimen shape or type designation"
+  },
+  {
+    "id": 1606,
+    "name": "Pre-treatment",
+    "mapping_section": "SeriesMapping",
+    "description": "Pre-treatment or conditioning applied to the specimen"
+  },
+  {
+    "id": 1105,
+    "name": "Tester",
+    "mapping_section": "SeriesMapping",
+    "description": "Name of the tester for the report"
+  },
+  {
+    "id": 1622,
+    "name": "Notes",
+    "mapping_section": "SeriesMapping",
+    "description": "General notes or deviations from the standard test conditions"
+  },
+  {
+    "id": 1421,
+    "name": "Machine data",
+    "mapping_section": "SeriesMapping",
+    "description": "Output of machine data in the report"
   }
 ]
+

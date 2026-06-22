@@ -11,3 +11,5 @@
 | Added ini_file_generator.py + main.py INI generation step | 2026-06-19 11:05 | Passed | 49 passed in 1.08s |
 | Added zimt_script_generator.py (Specimen-ID lookup) + GUI Step 6 + INI KeyColumnName | 2026-06-22 12:45 | Passed | 68 passed in 2.14s |
 | Removed ZimtScriptGenerator — replaced with static Config/generic_import.zimt | 2026-06-22 13:18 | Passed | 51 passed in 1.67s |
+| Expanded parameter catalog (16 params from HTML) + inline mapping editor in GUI | 2026-06-22 13:39 | Passed | 51 passed in 1.62s |
+| Changed mapping picker trigger from single click to double click | 2026-06-22 13:48 | Passed | 51 passed in 2.26s |
